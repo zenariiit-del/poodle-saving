@@ -45,7 +45,7 @@ $("addButton").addEventListener("click",async()=>{
 });
 $("undoButton").addEventListener("click",async()=>{
   const today=localDateString();
-  const {data,error}=await sb.from("farts").select("id").eq("local_date",today).eq("source","live").order("created_at",{ascending:false}).limit(1);
+  const {data,error}=await sb.from("farts").select("id").eq("local_date",today).in("source",["live","shortcut"]).order("created_at",{ascending:false}).limit(1);
   if(error){alert("戻せませんでした: "+error.message);return}
   if(!data?.length)return;
   const {error:delErr}=await sb.from("farts").delete().eq("id",data[0].id);
@@ -60,7 +60,7 @@ async function fetchRows(){
   if(error)throw error;return data||[];
 }
 async function fetchExchanges(){
-  const {data,error}=await sb.from("exchanges").select("id,created_at,local_date,usd_amount,rate,jpy_amount").order("created_at",{ascending:false});
+  const {data,error}=await sb.from("exchanges").select("id,created_at,local_date,usd_amount,rate,jpy_amount,currency,cashout_amount").order("created_at",{ascending:false});
   if(error)throw error;return data||[];
 }
 async function getRate(){
@@ -102,14 +102,29 @@ function renderSummary(rows,exchanges,rate){
   const todayTotal=sumRows(rows.filter(r=>r.local_date===today));
   const monthTotal=sumRows(rows.filter(r=>(r.local_date||"").startsWith(prefix)));
   const lifetime=sumRows(rows);
-  const convertedUsd=sumExchanges(exchanges,"usd_amount");
-  const convertedJpy=sumExchanges(exchanges,"jpy_amount");
-  const remaining=lifetime-convertedUsd;
-  $("todayTotal").textContent=`$${formatUsd(todayTotal)}`;$("todayYen").textContent=yenText(todayTotal,rate.rate);
-  $("monthTotal").textContent=`$${formatUsd(monthTotal)}`;$("monthYen").textContent=yenText(monthTotal,rate.rate);
-  $("lifetimeUsd").textContent=`$${formatUsd(lifetime)}`;$("convertedUsd").textContent=`$${formatUsd(convertedUsd)}`;$("convertedUsdSmall").textContent=`$${formatUsd(convertedUsd)}`;
-  $("remainingUsd").textContent=`$${formatUsd(remaining)}`;$("remainingYenEstimate").textContent=yenText(remaining,rate.rate);
-  $("convertedYen").textContent=`¥${Math.round(convertedJpy).toLocaleString("ja-JP")}`;$("exchangeCount").textContent=exchanges.length;
+  const deductedUsd=sumExchanges(exchanges,"usd_amount");
+  const cashoutUsd=exchanges
+    .filter(x=>(x.currency||"JPY")==="USD")
+    .reduce((s,x)=>s+Number(x.cashout_amount ?? x.usd_amount ?? 0),0);
+  const cashoutJpy=exchanges
+    .filter(x=>(x.currency||"JPY")==="JPY")
+    .reduce((s,x)=>s+Number(x.cashout_amount ?? x.jpy_amount ?? 0),0);
+  const remaining=lifetime-deductedUsd;
+
+  $("todayTotal").textContent=`$${formatUsd(todayTotal)}`;
+  $("todayYen").textContent=yenText(todayTotal,rate.rate);
+  $("monthTotal").textContent=`$${formatUsd(monthTotal)}`;
+  $("monthYen").textContent=yenText(monthTotal,rate.rate);
+
+  $("lifetimeUsd").textContent=`$${formatUsd(lifetime)}`;
+  $("convertedUsd").textContent=`$${formatUsd(deductedUsd)}`;
+  $("convertedUsdSmall").textContent=`$${formatUsd(deductedUsd)}`;
+  $("remainingUsd").textContent=`$${formatUsd(remaining)}`;
+  $("remainingYenEstimate").textContent=yenText(remaining,rate.rate);
+
+  $("cashoutUsd").textContent=`$${formatUsd(cashoutUsd)}`;
+  $("cashoutJpy").textContent=`¥${Math.round(cashoutJpy).toLocaleString("ja-JP")}`;
+  $("exchangeCount").textContent=exchanges.length;
 }
 
 function openEditModal(dateStr,currentTotal){
@@ -136,19 +151,19 @@ function setExchangeMode(mode){
   const usdMode=mode==="usd";
   $("modeUsdButton").classList.toggle("active",usdMode);
   $("modeJpyButton").classList.toggle("active",!usdMode);
+
   $("exchangeInputPrefix").textContent=usdMode?"$":"¥";
-  $("exchangeInputLabel").textContent=usdMode?"交換するドル":"受け取りたい円";
-  $("exchangeResultLabel").textContent=usdMode?"受け取る円":"差し引くドル";
+  $("exchangeInputLabel").textContent=usdMode?"引き落とすドル":"換金する円";
+  $("exchangeResultLabel").textContent=usdMode?"換金する金額":"残高から引き落とすドル";
   $("exchangeAmountInput").placeholder=usdMode?"500":"50000";
   $("exchangeAmountInput").value="";
-  $("exchangeResultPreview").textContent=usdMode?"¥0":"$0";
+  $("exchangeResultPreview").textContent=usdMode?"$0":"$0";
 }
 
 function openExchangeModal(){
-  if(!currentRateInfo.rate){alert("為替レートを取得できていないため交換できません。");return}
   const remaining=remainingUsd();
   $("exchangeAvailable").textContent=`$${formatUsd(remaining)}`;
-  $("exchangeRate").textContent=`¥${currentRateInfo.rate.toFixed(2)}`;
+  $("exchangeRate").textContent=currentRateInfo.rate?`¥${currentRateInfo.rate.toFixed(2)}`:"¥—";
   setExchangeMode("usd");
   $("exchangeModal").classList.remove("hidden");
 }
@@ -157,21 +172,34 @@ function closeExchangeModal(){$("exchangeModal").classList.add("hidden")}
 function exchangeValues(){
   const amount=Math.max(0,Number($("exchangeAmountInput").value||0));
   const rate=currentRateInfo.rate||0;
+
   if(exchangeMode==="usd"){
     const usd=Math.round(amount*100)/100;
-    const jpy=Math.round(usd*rate);
-    return {usd,jpy};
+    return {
+      currency:"USD",
+      cashoutAmount:usd,
+      usd,
+      jpy:0,
+      rate:rate||1
+    };
   }
+
   const jpy=Math.round(amount);
-  const usd=Math.round((jpy/rate)*100)/100;
-  return {usd,jpy};
+  const usd=rate?Math.round((jpy/rate)*100)/100:0;
+  return {
+    currency:"JPY",
+    cashoutAmount:jpy,
+    usd,
+    jpy,
+    rate
+  };
 }
 
 function updateExchangePreview(){
-  const {usd,jpy}=exchangeValues();
+  const values=exchangeValues();
   $("exchangeResultPreview").textContent=exchangeMode==="usd"
-    ?`¥${jpy.toLocaleString("ja-JP")}`
-    :`$${formatUsd(usd)}`;
+    ?`$${formatUsd(values.usd)}`
+    :`$${formatUsd(values.usd)}`;
 }
 
 $("openExchangeButton").addEventListener("click",openExchangeModal);
@@ -183,15 +211,43 @@ $("exchangeAmountInput").addEventListener("input",updateExchangePreview);
 
 $("confirmExchangeButton").addEventListener("click",async()=>{
   const amount=Number($("exchangeAmountInput").value||0);
-  const available=remainingUsd(),rate=currentRateInfo.rate;
-  if(!rate){alert("レートを取得できていません。");return}
-  if(!Number.isFinite(amount)||amount<=0){alert(exchangeMode==="usd"?"交換するドル金額を入力してください。":"受け取りたい円金額を入力してください。");return}
-  const {usd,jpy}=exchangeValues();
-  if(usd>available){alert(`残高は $${formatUsd(available)} です。`);return}
+  const available=remainingUsd();
+
+  if(!Number.isFinite(amount)||amount<=0){
+    alert(exchangeMode==="usd"?"引き落とすドル金額を入力してください。":"換金する円金額を入力してください。");
+    return;
+  }
+
+  if(exchangeMode==="jpy"&&!currentRateInfo.rate){
+    alert("円で換金するには為替レートの取得が必要です。");
+    return;
+  }
+
+  const values=exchangeValues();
+
+  if(values.usd>available){
+    alert(`残高は $${formatUsd(available)} です。`);
+    return;
+  }
+
   const now=new Date();
-  const {error}=await sb.from("exchanges").insert({created_at:now.toISOString(),local_date:localDateString(now),usd_amount:usd,rate:rate,jpy_amount:jpy});
-  if(error){alert("交換を保存できませんでした: "+error.message);return}
-  closeExchangeModal();await refreshAll();
+  const {error}=await sb.from("exchanges").insert({
+    created_at:now.toISOString(),
+    local_date:localDateString(now),
+    usd_amount:values.usd,
+    rate:values.rate,
+    jpy_amount:values.jpy,
+    currency:values.currency,
+    cashout_amount:values.cashoutAmount
+  });
+
+  if(error){
+    alert("換金を保存できませんでした: "+error.message);
+    return;
+  }
+
+  closeExchangeModal();
+  await refreshAll();
 });
 
 function renderCalendar(rows){
@@ -215,8 +271,45 @@ function renderChart(rows){
   totals.forEach((total,i)=>{const w=document.createElement("div");w.className="bar-wrap";const pct=total>0?Math.max(4,Math.round(total/max*100)):0;w.innerHTML=`<div class="bar-value">${formatUsd(total)}</div><div class="bar-slot"><div class="bar" style="height:${pct}%"></div></div><div class="bar-label">${i+1}</div>`;chart.appendChild(w)});
 }
 function renderExchangeHistory(exchanges){
-  const el=$("exchangeHistory");el.innerHTML="";if(!exchanges.length){el.innerHTML='<div class="history-empty">まだ円への交換はありません。</div>';return}
-  exchanges.forEach(x=>{const row=document.createElement("div");row.className="history-row";row.innerHTML=`<div><div class="history-date">${x.local_date}</div><div class="history-main">$${formatUsd(x.usd_amount)} を交換</div></div><div><div class="history-yen">¥${Math.round(Number(x.jpy_amount||0)).toLocaleString("ja-JP")}</div><div class="history-rate">$1 = ¥${Number(x.rate||0).toFixed(2)}</div></div>`;el.appendChild(row)});
+  const el=$("exchangeHistory");
+  el.innerHTML="";
+
+  if(!exchanges.length){
+    el.innerHTML='<div class="history-empty">まだ換金履歴はありません。</div>';
+    return;
+  }
+
+  exchanges.forEach(x=>{
+    const currency=x.currency||"JPY";
+    const row=document.createElement("div");
+    row.className="history-row";
+
+    if(currency==="USD"){
+      const original=Number(x.cashout_amount ?? x.usd_amount ?? 0);
+      row.innerHTML=`
+        <div>
+          <div class="history-date">${x.local_date}</div>
+          <div class="history-main">$${formatUsd(original)} を換金</div>
+        </div>
+        <div>
+          <div class="history-yen">-$${formatUsd(x.usd_amount)}</div>
+          <div class="history-rate">ドル残高から引き落とし</div>
+        </div>`;
+    }else{
+      const yen=Number(x.cashout_amount ?? x.jpy_amount ?? 0);
+      row.innerHTML=`
+        <div>
+          <div class="history-date">${x.local_date}</div>
+          <div class="history-main">¥${Math.round(yen).toLocaleString("ja-JP")} を換金</div>
+        </div>
+        <div>
+          <div class="history-yen">-$${formatUsd(x.usd_amount)}</div>
+          <div class="history-rate">$1 = ¥${Number(x.rate||0).toFixed(2)}</div>
+        </div>`;
+    }
+
+    el.appendChild(row);
+  });
 }
 
 window.addEventListener("load",init);

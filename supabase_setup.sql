@@ -117,3 +117,116 @@ create policy "authenticated can delete exchanges" on public.exchanges for delet
 grant usage on schema public to authenticated;
 grant select, insert, delete on table public.exchanges to authenticated;
 grant usage, select on sequence public.exchanges_id_seq to authenticated;
+
+
+-- Pooo$ Saving v7
+-- 「円に交換」から「換金」へ変更し、ドル換金と円換金を区別して保存します。
+
+alter table public.exchanges
+  add column if not exists currency text not null default 'JPY';
+
+alter table public.exchanges
+  add column if not exists cashout_amount numeric(14,2);
+
+-- v5/v6までの既存データはすべて「円へ交換」だったためJPYとして引き継ぎます。
+update public.exchanges
+set currency = 'JPY'
+where currency is null or currency = '';
+
+update public.exchanges
+set cashout_amount = jpy_amount
+where cashout_amount is null;
+
+alter table public.exchanges
+  alter column cashout_amount set not null;
+
+grant select, insert, delete on table public.exchanges to authenticated;
+grant usage, select on sequence public.exchanges_id_seq to authenticated;
+
+
+-- Pooo$ Saving v8
+-- iPhoneショートカットからアプリを開かずに +$10 する機能
+--
+-- このSQLをSupabase -> SQL Editorで1回実行してください。
+-- 最後に shortcut_token が表示されます。
+-- その値はGitHubには保存せず、iPhoneショートカットだけに入れてください。
+
+create schema if not exists private;
+
+revoke all on schema private from public;
+revoke all on schema private from anon;
+revoke all on schema private from authenticated;
+
+create table if not exists private.pooo_shortcut_secret (
+  id smallint primary key check (id = 1),
+  token text not null unique,
+  created_at timestamptz not null default now()
+);
+
+insert into private.pooo_shortcut_secret (id, token)
+values (
+  1,
+  replace(gen_random_uuid()::text, '-', '') ||
+  replace(gen_random_uuid()::text, '-', '')
+)
+on conflict (id) do nothing;
+
+create or replace function public.shortcut_add10(
+  p_token text,
+  p_local_date date
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, public, private
+as $$
+declare
+  v_token text;
+  v_new_id bigint;
+begin
+  select token
+    into v_token
+  from private.pooo_shortcut_secret
+  where id = 1;
+
+  if v_token is null or p_token is null or p_token <> v_token then
+    raise exception 'invalid shortcut token'
+      using errcode = '28000';
+  end if;
+
+  if p_local_date is null then
+    raise exception 'local date is required'
+      using errcode = '22004';
+  end if;
+
+  insert into public.farts (
+    created_at,
+    local_date,
+    amount_usd,
+    source
+  )
+  values (
+    now(),
+    p_local_date,
+    10,
+    'shortcut'
+  )
+  returning id into v_new_id;
+
+  return jsonb_build_object(
+    'ok', true,
+    'id', v_new_id,
+    'amount_usd', 10,
+    'local_date', p_local_date
+  );
+end;
+$$;
+
+revoke all on function public.shortcut_add10(text, date) from public;
+grant execute on function public.shortcut_add10(text, date) to anon;
+grant execute on function public.shortcut_add10(text, date) to authenticated;
+
+-- ↓ この結果に出るshortcut_tokenをiPhoneショートカットへ入れます。
+select token as shortcut_token
+from private.pooo_shortcut_secret
+where id = 1;

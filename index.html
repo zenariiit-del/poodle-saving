@@ -47,7 +47,7 @@
       <div id="remainingYenEstimate" class="hero-sub">約 ¥0</div>
       <div class="balance-grid">
         <div><span>これまでの累計</span><strong id="lifetimeUsd">$0</strong></div>
-        <div><span>交換済み</span><strong id="convertedUsd">$0</strong></div>
+        <div><span>引き落とし済み</span><strong id="convertedUsd">$0</strong></div>
       </div>
     </section>
 
@@ -78,14 +78,32 @@
 
     <section class="yen-card glass">
       <div class="yen-card-head">
-        <div><div class="section-kicker">日本で使えるお金</div><div id="convertedYen" class="yen-amount">¥0</div></div>
-        <button id="openExchangeButton" class="exchange-button" type="button">円に交換</button>
+        <div>
+          <div class="section-kicker">CASHED OUT</div>
+          <div class="cashout-title">換金したお金</div>
+        </div>
+        <button id="openExchangeButton" class="exchange-button" type="button">換金</button>
       </div>
-      <div class="yen-meta"><span>交換回数 <b id="exchangeCount">0</b></span><span>交換USD <b id="convertedUsdSmall">$0</b></span></div>
+
+      <div class="cashout-grid">
+        <div>
+          <span>ドル</span>
+          <strong id="cashoutUsd">$0</strong>
+        </div>
+        <div>
+          <span>円</span>
+          <strong id="cashoutJpy">¥0</strong>
+        </div>
+      </div>
+
+      <div class="yen-meta">
+        <span>換金回数 <b id="exchangeCount">0</b></span>
+        <span>残高から引落済み <b id="convertedUsdSmall">$0</b></span>
+      </div>
     </section>
 
     <section class="glass history-card">
-      <div class="section-head"><div><div class="section-kicker">EXCHANGE HISTORY</div><div class="section-title">円への交換履歴</div></div></div>
+      <div class="section-head"><div><div class="section-kicker">CASHOUT HISTORY</div><div class="section-title">換金履歴</div></div></div>
       <div id="exchangeHistory" class="exchange-history"></div>
     </section>
 
@@ -107,20 +125,40 @@
   <div id="exchangeModal" class="modal hidden" aria-hidden="true">
     <div id="exchangeBackdrop" class="modal-backdrop"></div>
     <div class="modal-sheet glass">
-      <div class="modal-title">円に交換</div><div class="modal-date">今日のレートで円換算します</div>
-      <div class="exchange-preview"><div><span>残りUSD</span><strong id="exchangeAvailable">$0</strong></div><div><span>現在レート</span><strong id="exchangeRate">¥—</strong></div></div>
+      <div class="modal-title">換金</div>
+      <div class="modal-date">ドルはそのまま、円は現在レートでUSD換算して残高から引き落とします</div>
 
-      <div class="exchange-mode" role="group" aria-label="金額の指定方法">
-        <button id="modeUsdButton" class="mode-button active" type="button">$で指定</button>
-        <button id="modeJpyButton" class="mode-button" type="button">円で指定</button>
+      <div class="exchange-preview">
+        <div><span>残りUSD</span><strong id="exchangeAvailable">$0</strong></div>
+        <div><span>現在レート</span><strong id="exchangeRate">¥—</strong></div>
       </div>
 
-      <label id="exchangeInputLabel" for="exchangeAmountInput">交換する金額</label>
-      <div class="currency-input"><span id="exchangeInputPrefix">$</span><input id="exchangeAmountInput" type="number" min="1" step="1" inputmode="decimal" placeholder="500"></div>
+      <div class="exchange-mode" role="group" aria-label="換金する通貨">
+        <button id="modeUsdButton" class="mode-button active" type="button">ドル</button>
+        <button id="modeJpyButton" class="mode-button" type="button">円</button>
+      </div>
+
+      <label id="exchangeInputLabel" for="exchangeAmountInput">引き落とすドル</label>
+      <div class="currency-input">
+        <span id="exchangeInputPrefix">$</span>
+        <input id="exchangeAmountInput" type="number" min="1" step="1" inputmode="decimal" placeholder="500">
+      </div>
+
       <div class="conversion-arrow">↓</div>
-      <div class="jpy-preview"><span id="exchangeResultLabel">受け取る円</span><strong id="exchangeResultPreview">¥0</strong></div>
-      <div class="modal-buttons"><button id="cancelExchangeButton" class="cancel-button" type="button">キャンセル</button><button id="confirmExchangeButton" class="save-button" type="button">交換する</button></div>
-      <div class="modal-note">$でも円でも指定できます。交換時のレートを保存するので、後から為替が変わっても履歴は変わりません。</div>
+
+      <div class="jpy-preview">
+        <span id="exchangeResultLabel">換金する金額</span>
+        <strong id="exchangeResultPreview">$0</strong>
+      </div>
+
+      <div class="modal-buttons">
+        <button id="cancelExchangeButton" class="cancel-button" type="button">キャンセル</button>
+        <button id="confirmExchangeButton" class="save-button" type="button">換金する</button>
+      </div>
+
+      <div class="modal-note">
+        ドル換金は入力したドルをそのまま残高から引き落とします。円換金は入力した円を現在レートでUSD換算し、そのUSD相当額を残高から引き落とします。
+      </div>
     </div>
   </div>
 
