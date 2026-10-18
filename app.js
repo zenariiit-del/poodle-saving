@@ -5,6 +5,7 @@ let editState={date:null,currentTotal:0};
 let currentRateInfo={rate:null,date:null};
 let latestRows=[];
 let latestExchanges=[];
+let exchangeMode="usd";
 
 function configured(){
   return cfg.SUPABASE_URL&&cfg.SUPABASE_ANON_KEY&&!cfg.SUPABASE_URL.includes("PASTE_")&&!cfg.SUPABASE_ANON_KEY.includes("PASTE_");
@@ -129,17 +130,65 @@ $("saveEditButton").addEventListener("click",async()=>{
 });
 
 function remainingUsd(){return sumRows(latestRows)-sumExchanges(latestExchanges,"usd_amount")}
+
+function setExchangeMode(mode){
+  exchangeMode=mode;
+  const usdMode=mode==="usd";
+  $("modeUsdButton").classList.toggle("active",usdMode);
+  $("modeJpyButton").classList.toggle("active",!usdMode);
+  $("exchangeInputPrefix").textContent=usdMode?"$":"¥";
+  $("exchangeInputLabel").textContent=usdMode?"交換するドル":"受け取りたい円";
+  $("exchangeResultLabel").textContent=usdMode?"受け取る円":"差し引くドル";
+  $("exchangeAmountInput").placeholder=usdMode?"500":"50000";
+  $("exchangeAmountInput").value="";
+  $("exchangeResultPreview").textContent=usdMode?"¥0":"$0";
+}
+
 function openExchangeModal(){
   if(!currentRateInfo.rate){alert("為替レートを取得できていないため交換できません。");return}
-  const remaining=remainingUsd();$("exchangeAvailable").textContent=`$${formatUsd(remaining)}`;$("exchangeRate").textContent=`¥${currentRateInfo.rate.toFixed(2)}`;$("exchangeUsdInput").value="";$("exchangeJpyPreview").textContent="¥0";$("exchangeModal").classList.remove("hidden");
+  const remaining=remainingUsd();
+  $("exchangeAvailable").textContent=`$${formatUsd(remaining)}`;
+  $("exchangeRate").textContent=`¥${currentRateInfo.rate.toFixed(2)}`;
+  setExchangeMode("usd");
+  $("exchangeModal").classList.remove("hidden");
 }
 function closeExchangeModal(){$("exchangeModal").classList.add("hidden")}
-function updateExchangePreview(){const usd=Math.max(0,Number($("exchangeUsdInput").value||0));$("exchangeJpyPreview").textContent=`¥${Math.round(usd*(currentRateInfo.rate||0)).toLocaleString("ja-JP")}`}
-$("openExchangeButton").addEventListener("click",openExchangeModal);$("cancelExchangeButton").addEventListener("click",closeExchangeModal);$("exchangeBackdrop").addEventListener("click",closeExchangeModal);$("exchangeUsdInput").addEventListener("input",updateExchangePreview);
+
+function exchangeValues(){
+  const amount=Math.max(0,Number($("exchangeAmountInput").value||0));
+  const rate=currentRateInfo.rate||0;
+  if(exchangeMode==="usd"){
+    const usd=Math.round(amount*100)/100;
+    const jpy=Math.round(usd*rate);
+    return {usd,jpy};
+  }
+  const jpy=Math.round(amount);
+  const usd=Math.round((jpy/rate)*100)/100;
+  return {usd,jpy};
+}
+
+function updateExchangePreview(){
+  const {usd,jpy}=exchangeValues();
+  $("exchangeResultPreview").textContent=exchangeMode==="usd"
+    ?`¥${jpy.toLocaleString("ja-JP")}`
+    :`$${formatUsd(usd)}`;
+}
+
+$("openExchangeButton").addEventListener("click",openExchangeModal);
+$("cancelExchangeButton").addEventListener("click",closeExchangeModal);
+$("exchangeBackdrop").addEventListener("click",closeExchangeModal);
+$("modeUsdButton").addEventListener("click",()=>setExchangeMode("usd"));
+$("modeJpyButton").addEventListener("click",()=>setExchangeMode("jpy"));
+$("exchangeAmountInput").addEventListener("input",updateExchangePreview);
+
 $("confirmExchangeButton").addEventListener("click",async()=>{
-  const usd=Number($("exchangeUsdInput").value||0),available=remainingUsd(),rate=currentRateInfo.rate;
-  if(!rate){alert("レートを取得できていません。");return}if(!Number.isFinite(usd)||usd<=0){alert("交換するUSD金額を入力してください。");return}if(usd>available){alert(`残高は $${formatUsd(available)} です。`);return}
-  const jpy=Math.round(usd*rate),now=new Date();
+  const amount=Number($("exchangeAmountInput").value||0);
+  const available=remainingUsd(),rate=currentRateInfo.rate;
+  if(!rate){alert("レートを取得できていません。");return}
+  if(!Number.isFinite(amount)||amount<=0){alert(exchangeMode==="usd"?"交換するドル金額を入力してください。":"受け取りたい円金額を入力してください。");return}
+  const {usd,jpy}=exchangeValues();
+  if(usd>available){alert(`残高は $${formatUsd(available)} です。`);return}
+  const now=new Date();
   const {error}=await sb.from("exchanges").insert({created_at:now.toISOString(),local_date:localDateString(now),usd_amount:usd,rate:rate,jpy_amount:jpy});
   if(error){alert("交換を保存できませんでした: "+error.message);return}
   closeExchangeModal();await refreshAll();

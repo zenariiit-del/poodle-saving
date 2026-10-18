@@ -35,3 +35,13 @@ GitHub更新
 
 注意
 この機能は貯金を円へ交換した記録を管理するものです。実際の銀行・両替サービスで通貨交換を実行する機能ではありません。
+
+
+v6 changes
+----------
+- Title: Pooo$ Saving
+- Main add button: Pooo +$10
+- Exchange summary card moved directly above exchange history
+- Exchange amount can be entered in USD or JPY
+- JPY mode calculates the USD deduction using the saved rate
+- No Supabase schema change is required from v5

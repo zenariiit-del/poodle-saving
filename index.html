@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#f7f5f7">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="poo$ Saving">
-  <title>poo$ Saving</title>
+  <meta name="apple-mobile-web-app-title" content="Pooo$ Saving">
+  <title>Pooo$ Saving</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="stylesheet" href="./styles.css">
@@ -16,7 +16,7 @@
   <div id="loginScreen" class="login-screen hidden">
     <div class="login-card glass">
       <img src="./icons/poodle.svg" class="login-poodle" alt="">
-      <div class="login-title">poo$ Saving</div>
+      <div class="login-title">Pooo$ Saving</div>
       <div class="login-copy">この端末では最初の1回だけパスワードを入力します。</div>
       <form id="loginForm">
         <input id="passwordInput" type="password" autocomplete="current-password" placeholder="パスワード" required>
@@ -32,7 +32,7 @@
         <img src="./icons/poodle.svg" class="brand-icon" alt="">
         <div>
           <div class="eyebrow">SAVINGS</div>
-          <div class="brand-title">poo$ Saving</div>
+          <div class="brand-title">Pooo$ Saving</div>
         </div>
       </div>
       <div class="rate-pill">
@@ -56,17 +56,9 @@
       <div class="mini-card glass"><span>今月</span><strong id="monthTotal">$0</strong><small id="monthYen">約 ¥0</small></div>
     </section>
 
-    <section class="yen-card glass">
-      <div class="yen-card-head">
-        <div><div class="section-kicker">日本で使えるお金</div><div id="convertedYen" class="yen-amount">¥0</div></div>
-        <button id="openExchangeButton" class="exchange-button" type="button">円に交換</button>
-      </div>
-      <div class="yen-meta"><span>交換回数 <b id="exchangeCount">0</b></span><span>交換USD <b id="convertedUsdSmall">$0</b></span></div>
-    </section>
-
     <section class="actions">
       <button id="undoButton" class="secondary-action" type="button">↩ 戻す</button>
-      <button id="addButton" class="primary-action" type="button">💨 おならした +$10</button>
+      <button id="addButton" class="primary-action" type="button">Pooo +$10</button>
     </section>
 
     <section class="glass calendar-card">
@@ -82,6 +74,14 @@
     <section class="glass chart-card">
       <div class="section-head"><div><div class="section-kicker">YEARLY</div><div id="chartTitle" class="section-title"></div></div><div class="chart-unit">$</div></div>
       <div class="chart-scroll"><div id="yearChart" class="year-chart"></div></div>
+    </section>
+
+    <section class="yen-card glass">
+      <div class="yen-card-head">
+        <div><div class="section-kicker">日本で使えるお金</div><div id="convertedYen" class="yen-amount">¥0</div></div>
+        <button id="openExchangeButton" class="exchange-button" type="button">円に交換</button>
+      </div>
+      <div class="yen-meta"><span>交換回数 <b id="exchangeCount">0</b></span><span>交換USD <b id="convertedUsdSmall">$0</b></span></div>
     </section>
 
     <section class="glass history-card">
@@ -109,12 +109,18 @@
     <div class="modal-sheet glass">
       <div class="modal-title">円に交換</div><div class="modal-date">今日のレートで円換算します</div>
       <div class="exchange-preview"><div><span>残りUSD</span><strong id="exchangeAvailable">$0</strong></div><div><span>現在レート</span><strong id="exchangeRate">¥—</strong></div></div>
-      <label for="exchangeUsdInput">交換する金額</label>
-      <div class="currency-input"><span>$</span><input id="exchangeUsdInput" type="number" min="1" step="1" inputmode="decimal" placeholder="500"></div>
+
+      <div class="exchange-mode" role="group" aria-label="金額の指定方法">
+        <button id="modeUsdButton" class="mode-button active" type="button">$で指定</button>
+        <button id="modeJpyButton" class="mode-button" type="button">円で指定</button>
+      </div>
+
+      <label id="exchangeInputLabel" for="exchangeAmountInput">交換する金額</label>
+      <div class="currency-input"><span id="exchangeInputPrefix">$</span><input id="exchangeAmountInput" type="number" min="1" step="1" inputmode="decimal" placeholder="500"></div>
       <div class="conversion-arrow">↓</div>
-      <div class="jpy-preview"><span>受け取る円</span><strong id="exchangeJpyPreview">¥0</strong></div>
+      <div class="jpy-preview"><span id="exchangeResultLabel">受け取る円</span><strong id="exchangeResultPreview">¥0</strong></div>
       <div class="modal-buttons"><button id="cancelExchangeButton" class="cancel-button" type="button">キャンセル</button><button id="confirmExchangeButton" class="save-button" type="button">交換する</button></div>
-      <div class="modal-note">交換時のレートを保存するので、後から為替が変わっても金額は変わりません。</div>
+      <div class="modal-note">$でも円でも指定できます。交換時のレートを保存するので、後から為替が変わっても履歴は変わりません。</div>
     </div>
   </div>
 
