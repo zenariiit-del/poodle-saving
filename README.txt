@@ -1,74 +1,37 @@
-プー＄貯金 - 待ち時間なし無料版
+poo$ Saving v5 - Apple style
 
-構成:
-静的Webアプリ → Supabase Auth / Database
-Python、Flask、Render Web Service、Cloudflare Tunnelは不要です。
+変更点
+- タイトルを poo$ Saving に変更
+- Apple風の白 / 淡いピンク / ガラスデザインへ全面変更
+- キャラクター画像変更機能を削除
+- ホーム画面アイコン生成機能を削除
+- これまでの累計USDを表示
+- 円への交換機能を追加
+- 交換済みUSDを累計から差し引き、残りUSDを表示
+- 交換した日のUSD/JPYレートを保存
+- 日本で使える円の累計を表示
+- 円交換履歴を表示
+- 過去日の金額編集機能は継続
 
-セットアップ:
-1. SupabaseでFree projectを作成
-2. SQL Editorで supabase_setup.sql を全て実行
-3. Authentication → Users → Add user
-   Email: poodle-savings@example.com
-   Password: 自分で決めたアプリ用パスワード
-4. Project Settings / API から Project URL と anon public key を確認
-5. config.js の SUPABASE_URL / SUPABASE_ANON_KEY に貼り付け
-6. このフォルダを GitHub Pages / Cloudflare Pages / Render Static Site のどれかで公開
-7. iPhoneのSafariでURLを開く
-8. 最初の1回だけパスワード入力
-9. 共有 → ホーム画面に追加
+既存Supabase利用者が必ず行うこと
+1. Supabase → SQL Editor → New query
+2. supabase_v5_migration.sql の中身を全部貼る
+3. Run
 
-セキュリティ:
-・パスワードはHTML/JavaScriptには書きません。
-・Supabase URLとanon keyはブラウザ利用向けの公開情報です。
-・RLSでログイン済みユーザーだけが記録を読み書きできます。
-・SafariのWebサイトデータを消した場合は再ログインが必要です。
+GitHub更新
+- config.js は上書きしないでください。
+- それ以外はv5ファイルで上書きしてOKです。
+- GitHub Pages URLは変わりません。
 
-おすすめ:
-GitHub Pagesが最も簡単です。
-静的サイトなので、久しぶりに開いてもFlaskのような起動待ちはありません。
+円への交換
+「円に交換」→ USD金額を入力 → その時点の為替レートでJPYへ換算。
+交換時の rate / USD / JPY をSupabase exchangesテーブルへ保存します。
 
+表示
+- これまでの累計 = fartデータの全合計
+- 交換済み = exchangesのUSD合計
+- 残っている貯金 = これまでの累計 - 交換済み
+- 日本で使えるお金 = exchangesのJPY合計
 
-v2 過去データ編集
------------------
-カレンダーの日付をタップすると、その日の合計金額を編集できます。
-保存時は元の記録を削除せず、「差額」の adjustment レコードを追加します。
-
-例:
-現在 $110 → $80 に変更
-=> -30 の adjustment を追加
-=> 表示合計は $80
-
-これにより、元の履歴を残したまま過去データを修正できます。
-
-
-v3 レート取得・画像変更
-----------------------
-・為替レート取得を Frankfurter v2 API に変更
-  https://api.frankfurter.dev/v2/rate/usd/jpy
-・v2が取得できない場合はv1 APIへ自動フォールバック
-・取得済みレートは端末にキャッシュ
-・アプリ下部の「キャラクター画像」から好きな画像を選択可能
-・選択画像はその端末のlocalStorageに保存
-・「元に戻す」で標準プードルへ戻せます
-
-注意:
-ホーム画面のPWAアイコンはiOS側がmanifest/apple-touch-iconを参照するため、
-アプリ内で選んだ画像には自動変更されません。
-ホーム画面アイコンを変える場合は icons/apple-touch-icon.png 等を差し替えて再追加してください。
-
-
-v4 ホーム画面アイコン変更
-------------------------
-1. アプリ下部の「キャラクター画像」で好きな画像を選択
-2. 「ホーム画面用アイコンを作る」を押す
-3. 180px / 192px / 512px の3つを保存
-4. GitHubの icons フォルダで以下を上書き
-   apple-touch-icon.png
-   icon-192.png
-   icon-512.png
-5. GitHub Pagesの反映を待つ
-6. iPhoneホーム画面から一度アプリを削除
-7. Safariで公開URLを開き直し、「ホーム画面に追加」
-
-iOSは既存ホーム画面アイコンを自動更新しないため、
-画像を変更した場合はホーム画面への再追加が必要です。
+注意
+この機能は貯金を円へ交換した記録を管理するものです。実際の銀行・両替サービスで通貨交換を実行する機能ではありません。

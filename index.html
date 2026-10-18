@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f7dce8">
+  <meta name="theme-color" content="#f7f5f7">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="プー＄貯金">
-  <title>プー＄貯金</title>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="poo$ Saving">
+  <title>poo$ Saving</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="stylesheet" href="./styles.css">
@@ -14,146 +15,106 @@
 <body>
   <div id="loginScreen" class="login-screen hidden">
     <div class="login-card glass">
-      <img id="loginPoodle" src="./icons/poodle.svg" class="login-poodle" alt="">
-      <div class="login-title">プー＄貯金</div>
+      <img src="./icons/poodle.svg" class="login-poodle" alt="">
+      <div class="login-title">poo$ Saving</div>
       <div class="login-copy">この端末では最初の1回だけパスワードを入力します。</div>
       <form id="loginForm">
         <input id="passwordInput" type="password" autocomplete="current-password" placeholder="パスワード" required>
-        <button type="submit" class="login-button">開く</button>
+        <button type="submit" class="primary-button">開く</button>
       </form>
       <div id="loginError" class="login-error"></div>
     </div>
   </div>
 
-  <main id="app" class="wrap hidden">
-    <section class="glass hero">
-      <img id="headerPoodle" src="./icons/poodle.svg" class="poodle" alt="">
-      <div class="title">プー＄貯金</div>
-      <div class="bubble"></div>
-    </section>
-
-    <section class="stats">
-      <div class="glass stat">
-        <div class="stat-head">
-          <div class="label">今日の合計</div>
-          <div class="mini-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round">
-              <path d="M6 18V9M12 18V5M18 18v-7"/>
-            </svg>
-          </div>
+  <main id="app" class="app hidden">
+    <header class="topbar">
+      <div class="brand">
+        <img src="./icons/poodle.svg" class="brand-icon" alt="">
+        <div>
+          <div class="eyebrow">SAVINGS</div>
+          <div class="brand-title">poo$ Saving</div>
         </div>
-        <div id="todayTotal" class="amount">$0</div>
-        <div id="todayYen" class="yen">(約 ¥0)</div>
       </div>
+      <div class="rate-pill">
+        <span id="rateMain">$1 = ¥—</span>
+        <small id="rateDate">取得中</small>
+      </div>
+    </header>
 
-      <div class="glass stat">
-        <div class="stat-head">
-          <div class="label">今月の合計</div>
-          <div class="mini-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 16l5-5 4 4 7-8M16 8h4v4"/>
-            </svg>
-          </div>
-        </div>
-        <div id="monthTotal" class="amount">$0</div>
-        <div id="monthYen" class="yen">(約 ¥0)</div>
+    <section class="hero-balance glass">
+      <div class="section-kicker">残っている貯金</div>
+      <div id="remainingUsd" class="hero-amount">$0</div>
+      <div id="remainingYenEstimate" class="hero-sub">約 ¥0</div>
+      <div class="balance-grid">
+        <div><span>これまでの累計</span><strong id="lifetimeUsd">$0</strong></div>
+        <div><span>交換済み</span><strong id="convertedUsd">$0</strong></div>
       </div>
     </section>
 
-    <section class="glass rate-card">
-      <div class="rate-title">今日の屁ぶ価</div>
-      <div id="rateMain" class="rate-main">$1 = ¥—</div>
-      <div id="rateDate" class="rate-date">取得中...</div>
+    <section class="summary-grid">
+      <div class="mini-card glass"><span>今日</span><strong id="todayTotal">$0</strong><small id="todayYen">約 ¥0</small></div>
+      <div class="mini-card glass"><span>今月</span><strong id="monthTotal">$0</strong><small id="monthYen">約 ¥0</small></div>
+    </section>
+
+    <section class="yen-card glass">
+      <div class="yen-card-head">
+        <div><div class="section-kicker">日本で使えるお金</div><div id="convertedYen" class="yen-amount">¥0</div></div>
+        <button id="openExchangeButton" class="exchange-button" type="button">円に交換</button>
+      </div>
+      <div class="yen-meta"><span>交換回数 <b id="exchangeCount">0</b></span><span>交換USD <b id="convertedUsdSmall">$0</b></span></div>
     </section>
 
     <section class="actions">
-      <button id="undoButton" class="action-button back-button" type="button">↩ 戻す</button>
-      <button id="addButton" class="action-button add-button" type="button">💨 おならした +$10</button>
+      <button id="undoButton" class="secondary-action" type="button">↩ 戻す</button>
+      <button id="addButton" class="primary-action" type="button">💨 おならした +$10</button>
     </section>
 
     <section class="glass calendar-card">
-      <div class="calendar-nav">
-        <button id="prevMonth" class="nav-button" type="button">‹</button>
-        <div>
-          <div id="monthTitle" class="month-title"></div>
-          <div id="monthSub" class="month-sub">📍 今月を表示中</div>
-        </div>
-        <button id="nextMonth" class="nav-button" type="button">›</button>
+      <div class="calendar-head">
+        <button id="prevMonth" class="round-button" type="button">‹</button>
+        <div><div id="monthTitle" class="month-title"></div><div id="monthSub" class="month-sub"></div></div>
+        <button id="nextMonth" class="round-button" type="button">›</button>
       </div>
-      <div class="weekdays">
-        <div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div><div>日</div>
-      </div>
+      <div class="weekdays"><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div><div>日</div></div>
       <div id="calendarGrid" class="calendar-grid"></div>
     </section>
 
     <section class="glass chart-card">
-      <div class="chart-head">
-        <div id="chartTitle" class="chart-title"></div>
-        <div class="chart-unit">単位：$</div>
-      </div>
-      <div class="chart-scroll">
-        <div id="yearChart" class="year-chart"></div>
-      </div>
+      <div class="section-head"><div><div class="section-kicker">YEARLY</div><div id="chartTitle" class="section-title"></div></div><div class="chart-unit">$</div></div>
+      <div class="chart-scroll"><div id="yearChart" class="year-chart"></div></div>
     </section>
 
-    <section class="glass icon-settings">
-      <div class="icon-settings-title">キャラクター画像</div>
-      <div class="icon-settings-row">
-        <img id="settingsPoodle" src="./icons/poodle.svg" class="settings-poodle" alt="">
-        <div class="icon-settings-buttons">
-          <label class="image-select-button" for="iconFileInput">画像を選ぶ</label>
-          <input id="iconFileInput" type="file" accept="image/*" hidden>
-          <button id="resetIconButton" class="reset-icon-button" type="button">元に戻す</button>
-        </div>
-      </div>
-      <div class="icon-settings-note">選んだ画像はこの端末に保存されます。</div>
-
-      <div class="home-icon-section">
-        <div class="home-icon-title">ホーム画面アイコン</div>
-        <div class="home-icon-note">上で選んだ画像から、iPhone用アイコンを作成できます。</div>
-        <button id="generateHomeIconsButton" class="generate-icon-button" type="button">ホーム画面用アイコンを作る</button>
-        <div id="iconDownloadArea" class="icon-download-area hidden">
-          <a id="download180" download="apple-touch-icon.png">180px</a>
-          <a id="download192" download="icon-192.png">192px</a>
-          <a id="download512" download="icon-512.png">512px</a>
-        </div>
-      </div>
+    <section class="glass history-card">
+      <div class="section-head"><div><div class="section-kicker">EXCHANGE HISTORY</div><div class="section-title">円への交換履歴</div></div></div>
+      <div id="exchangeHistory" class="exchange-history"></div>
     </section>
 
-    <div class="footer-actions">
-      <button id="logoutButton" class="logout-button" type="button">この端末の認証を解除</button>
-    </div>
+    <div class="footer"><button id="logoutButton" class="text-button" type="button">この端末の認証を解除</button></div>
   </main>
 
-
   <div id="editModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop" id="modalBackdrop"></div>
-    <div class="modal-card glass" role="dialog" aria-modal="true" aria-labelledby="editTitle">
-      <div id="editTitle" class="modal-title">過去データを編集</div>
-      <div id="editDate" class="modal-date"></div>
+    <div id="editBackdrop" class="modal-backdrop"></div>
+    <div class="modal-sheet glass">
+      <div class="modal-title">その日の合計を編集</div><div id="editDate" class="modal-date"></div>
+      <div class="current-line"><span>現在</span><strong id="editCurrentTotal">$0</strong></div>
+      <div class="quick-buttons"><button id="minus10Button" type="button">− $10</button><button id="plus10Button" type="button">＋ $10</button></div>
+      <label for="editAmount">変更後の合計</label>
+      <div class="currency-input"><span>$</span><input id="editAmount" type="number" min="0" step="1" inputmode="numeric"></div>
+      <div class="modal-buttons"><button id="cancelEditButton" class="cancel-button" type="button">キャンセル</button><button id="saveEditButton" class="save-button" type="button">保存</button></div>
+    </div>
+  </div>
 
-      <div class="modal-current">
-        現在の合計
-        <span id="editCurrentTotal">$0</span>
-      </div>
-
-      <div class="quick-adjust">
-        <button id="minus10Button" type="button">− $10</button>
-        <button id="plus10Button" type="button">＋ $10</button>
-      </div>
-
-      <label class="amount-input-label" for="editAmount">この日の合計</label>
-      <div class="amount-input-wrap">
-        <span>$</span>
-        <input id="editAmount" type="number" inputmode="numeric" step="1" min="0" value="0">
-      </div>
-
-      <div class="modal-actions">
-        <button id="cancelEditButton" class="modal-cancel" type="button">キャンセル</button>
-        <button id="saveEditButton" class="modal-save" type="button">保存</button>
-      </div>
-
-      <div class="modal-note">日付をタップすると、いつでもその日の合計を修正できます。</div>
+  <div id="exchangeModal" class="modal hidden" aria-hidden="true">
+    <div id="exchangeBackdrop" class="modal-backdrop"></div>
+    <div class="modal-sheet glass">
+      <div class="modal-title">円に交換</div><div class="modal-date">今日のレートで円換算します</div>
+      <div class="exchange-preview"><div><span>残りUSD</span><strong id="exchangeAvailable">$0</strong></div><div><span>現在レート</span><strong id="exchangeRate">¥—</strong></div></div>
+      <label for="exchangeUsdInput">交換する金額</label>
+      <div class="currency-input"><span>$</span><input id="exchangeUsdInput" type="number" min="1" step="1" inputmode="decimal" placeholder="500"></div>
+      <div class="conversion-arrow">↓</div>
+      <div class="jpy-preview"><span>受け取る円</span><strong id="exchangeJpyPreview">¥0</strong></div>
+      <div class="modal-buttons"><button id="cancelExchangeButton" class="cancel-button" type="button">キャンセル</button><button id="confirmExchangeButton" class="save-button" type="button">交換する</button></div>
+      <div class="modal-note">交換時のレートを保存するので、後から為替が変わっても金額は変わりません。</div>
     </div>
   </div>
 

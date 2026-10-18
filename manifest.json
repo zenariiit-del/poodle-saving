@@ -1,10 +1,10 @@
 {
-  "name": "プー＄貯金",
-  "short_name": "プー＄",
+  "name": "poo$ Saving",
+  "short_name": "poo$",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f7dce8",
-  "theme_color": "#f7dce8",
+  "background_color": "#f7f5f7",
+  "theme_color": "#f7f5f7",
   "icons": [
     {
       "src": "./icons/icon-192.png",
