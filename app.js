@@ -1,6 +1,7 @@
 const cfg=window.POODLE_CONFIG||{};
 const $=id=>document.getElementById(id);
 let sb,viewDate=new Date();viewDate.setDate(1);
+let editState={date:null,currentTotal:0};
 
 function configured(){
   return cfg.SUPABASE_URL&&cfg.SUPABASE_ANON_KEY&&!cfg.SUPABASE_URL.includes("PASTE_")&&!cfg.SUPABASE_ANON_KEY.includes("PASTE_");
@@ -12,7 +13,43 @@ function monthPrefix(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padS
 function showLogin(msg=""){ $("app").classList.add("hidden");$("loginScreen").classList.remove("hidden");$("loginError").textContent=msg }
 function showApp(){ $("loginScreen").classList.add("hidden");$("app").classList.remove("hidden") }
 
+
+const CUSTOM_ICON_KEY="poodle_custom_icon";
+
+function applyCustomIcon(){
+  const custom=localStorage.getItem(CUSTOM_ICON_KEY);
+  const src=custom||"./icons/poodle.svg";
+  ["headerPoodle","loginPoodle","settingsPoodle"].forEach(id=>{
+    const el=$(id);
+    if(el)el.src=src;
+  });
+}
+
+function saveCustomIcon(file){
+  if(!file)return;
+  if(!file.type.startsWith("image/")){
+    alert("画像ファイルを選んでください。");
+    return;
+  }
+  if(file.size>3*1024*1024){
+    alert("画像は3MB以下がおすすめです。");
+    return;
+  }
+
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      localStorage.setItem(CUSTOM_ICON_KEY,reader.result);
+      applyCustomIcon();
+    }catch(e){
+      alert("画像を保存できませんでした。もう少し小さい画像を選んでください。");
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
 async function init(){
+  applyCustomIcon();
   if(!configured()){
     showLogin("config.js にSupabaseの設定を入れてください。");
     $("loginForm").querySelector("button").disabled=true;
@@ -32,6 +69,66 @@ $("loginForm").addEventListener("submit",async e=>{
   $("passwordInput").value="";showApp();await refreshAll();
 });
 $("logoutButton").addEventListener("click",async()=>{await sb.auth.signOut();showLogin("この端末の認証を解除しました。")});
+
+$("iconFileInput").addEventListener("change",e=>{
+  const file=e.target.files?.[0];
+  if(file)saveCustomIcon(file);
+  e.target.value="";
+});
+
+$("resetIconButton").addEventListener("click",()=>{
+  localStorage.removeItem(CUSTOM_ICON_KEY);
+  applyCustomIcon();
+});
+
+
+function getSelectedIconSource(){
+  return localStorage.getItem(CUSTOM_ICON_KEY) || "./icons/poodle.svg";
+}
+
+function imageToSquarePngDataUrl(src,size){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement("canvas");
+      canvas.width=size;canvas.height=size;
+      const ctx=canvas.getContext("2d");
+
+      // background
+      ctx.fillStyle="#f8e5ed";
+      ctx.fillRect(0,0,size,size);
+
+      const scale=Math.max(size/img.width,size/img.height);
+      const w=img.width*scale;
+      const h=img.height*scale;
+      const x=(size-w)/2;
+      const y=(size-h)/2;
+
+      ctx.drawImage(img,x,y,w,h);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror=reject;
+    img.src=src;
+  });
+}
+
+$("generateHomeIconsButton").addEventListener("click",async()=>{
+  try{
+    const src=getSelectedIconSource();
+    const d180=await imageToSquarePngDataUrl(src,180);
+    const d192=await imageToSquarePngDataUrl(src,192);
+    const d512=await imageToSquarePngDataUrl(src,512);
+
+    $("download180").href=d180;
+    $("download192").href=d192;
+    $("download512").href=d512;
+    $("iconDownloadArea").classList.remove("hidden");
+  }catch(e){
+    console.error(e);
+    alert("ホーム画面用アイコンを作成できませんでした。");
+  }
+});
+
 
 $("addButton").addEventListener("click",async()=>{
   const now=new Date();
@@ -57,14 +154,37 @@ async function fetchRows(){
 }
 async function getRate(){
   const key="poodle_last_rate";
-  try{
-    const r=await fetch("https://api.frankfurter.app/latest?from=USD&to=JPY",{cache:"no-store"});
-    if(!r.ok)throw new Error("rate");
-    const j=await r.json(),v={rate:Number(j.rates.JPY),date:j.date};
-    localStorage.setItem(key,JSON.stringify(v));return v;
-  }catch{
-    try{return JSON.parse(localStorage.getItem(key))||{rate:null,date:null}}catch{return{rate:null,date:null}}
+  const endpoints=[
+    {
+      url:"https://api.frankfurter.dev/v2/rate/usd/jpy",
+      parse:j=>({rate:Number(j.rate),date:j.date})
+    },
+    {
+      url:"https://api.frankfurter.dev/v1/latest?base=USD&symbols=JPY",
+      parse:j=>({rate:Number(j.rates.JPY),date:j.date})
+    }
+  ];
+
+  for(const ep of endpoints){
+    try{
+      const r=await fetch(ep.url,{cache:"no-store"});
+      if(!r.ok)continue;
+      const j=await r.json();
+      const v=ep.parse(j);
+      if(!Number.isFinite(v.rate))continue;
+      localStorage.setItem(key,JSON.stringify(v));
+      return v;
+    }catch(e){
+      console.warn("rate fetch failed",ep.url,e);
+    }
   }
+
+  try{
+    const cached=JSON.parse(localStorage.getItem(key));
+    if(cached?.rate)return cached;
+  }catch(e){}
+
+  return {rate:null,date:null};
 }
 function yenText(usd,rate){return rate?`約 ¥${Math.round(usd*rate).toLocaleString("ja-JP")}`:"約 ¥—"}
 
@@ -87,6 +207,58 @@ function renderRate(v){
   if(v.rate){$("rateMain").textContent=`$1 = ¥${v.rate.toFixed(2)}`;$("rateDate").textContent=`取得レート日：${v.date||"—"}`}
   else{$("rateMain").textContent="$1 = ¥—";$("rateDate").textContent="レート取得できません"}
 }
+
+function openEditModal(dateStr,currentTotal){
+  editState={date:dateStr,currentTotal:Number(currentTotal||0)};
+  const [y,m,d]=dateStr.split("-").map(Number);
+  $("editDate").textContent=`${y}年${m}月${d}日`;
+  $("editCurrentTotal").textContent=`$${editState.currentTotal}`;
+  $("editAmount").value=editState.currentTotal;
+  $("editModal").classList.remove("hidden");
+  $("editModal").setAttribute("aria-hidden","false");
+  setTimeout(()=>$("editAmount").focus(),80);
+}
+function closeEditModal(){
+  $("editModal").classList.add("hidden");
+  $("editModal").setAttribute("aria-hidden","true");
+}
+function adjustEditAmount(delta){
+  const current=Math.max(0,Number($("editAmount").value||0));
+  $("editAmount").value=Math.max(0,current+delta);
+}
+
+$("minus10Button").addEventListener("click",()=>adjustEditAmount(-10));
+$("plus10Button").addEventListener("click",()=>adjustEditAmount(10));
+$("cancelEditButton").addEventListener("click",closeEditModal);
+$("modalBackdrop").addEventListener("click",closeEditModal);
+
+$("saveEditButton").addEventListener("click",async()=>{
+  if(!editState.date)return;
+  const desired=Math.max(0,Math.round(Number($("editAmount").value||0)));
+  const diff=desired-editState.currentTotal;
+
+  if(diff===0){
+    closeEditModal();
+    return;
+  }
+
+  const now=new Date();
+  const {error}=await sb.from("farts").insert({
+    created_at:now.toISOString(),
+    local_date:editState.date,
+    amount_usd:diff,
+    source:"adjustment"
+  });
+
+  if(error){
+    alert("修正を保存できませんでした: "+error.message);
+    return;
+  }
+
+  closeEditModal();
+  await refreshAll();
+});
+
 function renderCalendar(rows){
   const y=viewDate.getFullYear(),m=viewDate.getMonth(),now=new Date();
   $("monthTitle").textContent=`${y}年 ${m+1}月`;
@@ -104,6 +276,8 @@ function renderCalendar(rows){
     x.innerHTML=`<div class="day-num">${d}</div>`;
     if(totals[d])x.innerHTML+=`<div class="pill${totals[d]>=100?" large":""}">$${totals[d]}</div>`;
     else x.innerHTML+=`<div class="dash">ー</div>`;
+    const dateStr=`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    x.addEventListener("click",()=>openEditModal(dateStr,totals[d]||0));
     grid.appendChild(x)
   }
   const trail=(7-((lead+days)%7))%7;

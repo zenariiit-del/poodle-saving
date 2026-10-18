@@ -14,7 +14,7 @@
 <body>
   <div id="loginScreen" class="login-screen hidden">
     <div class="login-card glass">
-      <img src="./icons/poodle.svg" class="login-poodle" alt="">
+      <img id="loginPoodle" src="./icons/poodle.svg" class="login-poodle" alt="">
       <div class="login-title">プー＄貯金</div>
       <div class="login-copy">この端末では最初の1回だけパスワードを入力します。</div>
       <form id="loginForm">
@@ -27,7 +27,7 @@
 
   <main id="app" class="wrap hidden">
     <section class="glass hero">
-      <img src="./icons/poodle.svg" class="poodle" alt="">
+      <img id="headerPoodle" src="./icons/poodle.svg" class="poodle" alt="">
       <div class="title">プー＄貯金</div>
       <div class="bubble"></div>
     </section>
@@ -96,10 +96,66 @@
       </div>
     </section>
 
+    <section class="glass icon-settings">
+      <div class="icon-settings-title">キャラクター画像</div>
+      <div class="icon-settings-row">
+        <img id="settingsPoodle" src="./icons/poodle.svg" class="settings-poodle" alt="">
+        <div class="icon-settings-buttons">
+          <label class="image-select-button" for="iconFileInput">画像を選ぶ</label>
+          <input id="iconFileInput" type="file" accept="image/*" hidden>
+          <button id="resetIconButton" class="reset-icon-button" type="button">元に戻す</button>
+        </div>
+      </div>
+      <div class="icon-settings-note">選んだ画像はこの端末に保存されます。</div>
+
+      <div class="home-icon-section">
+        <div class="home-icon-title">ホーム画面アイコン</div>
+        <div class="home-icon-note">上で選んだ画像から、iPhone用アイコンを作成できます。</div>
+        <button id="generateHomeIconsButton" class="generate-icon-button" type="button">ホーム画面用アイコンを作る</button>
+        <div id="iconDownloadArea" class="icon-download-area hidden">
+          <a id="download180" download="apple-touch-icon.png">180px</a>
+          <a id="download192" download="icon-192.png">192px</a>
+          <a id="download512" download="icon-512.png">512px</a>
+        </div>
+      </div>
+    </section>
+
     <div class="footer-actions">
       <button id="logoutButton" class="logout-button" type="button">この端末の認証を解除</button>
     </div>
   </main>
+
+
+  <div id="editModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-card glass" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+      <div id="editTitle" class="modal-title">過去データを編集</div>
+      <div id="editDate" class="modal-date"></div>
+
+      <div class="modal-current">
+        現在の合計
+        <span id="editCurrentTotal">$0</span>
+      </div>
+
+      <div class="quick-adjust">
+        <button id="minus10Button" type="button">− $10</button>
+        <button id="plus10Button" type="button">＋ $10</button>
+      </div>
+
+      <label class="amount-input-label" for="editAmount">この日の合計</label>
+      <div class="amount-input-wrap">
+        <span>$</span>
+        <input id="editAmount" type="number" inputmode="numeric" step="1" min="0" value="0">
+      </div>
+
+      <div class="modal-actions">
+        <button id="cancelEditButton" class="modal-cancel" type="button">キャンセル</button>
+        <button id="saveEditButton" class="modal-save" type="button">保存</button>
+      </div>
+
+      <div class="modal-note">日付をタップすると、いつでもその日の合計を修正できます。</div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
